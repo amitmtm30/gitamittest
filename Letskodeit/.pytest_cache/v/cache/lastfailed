@@ -1,0 +1,5 @@
+{
+  "tests/courses/register_courses_tests.py::RegisterCoursesTests::test_enrollForCourse_1___JavaScript_for_beginners____1234567891237896____0123____198____Algeria____122001__": true,
+  "tests/home/login_tests.py::LoginTests::test_validLogin": true,
+  "tests/test_suit_demo.py::LoginTests::test_validLogin": true
+}

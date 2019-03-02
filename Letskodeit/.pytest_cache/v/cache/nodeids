@@ -1,0 +1,6 @@
+[
+  "tests/test_suit_demo.py::RegisterCoursesTests::test_enrollForCourse_1___JavaScript_for_beginners____1234____1212____456____India____122002__",
+  "tests/test_suit_demo.py::RegisterCoursesTests::test_enrollForCourse_2___Learn_Python_3_from_scratch____1234____1212____476____India____122005__",
+  "tests/test_suit_demo.py::LoginTests::test_invalidValidLogin",
+  "tests/test_suit_demo.py::LoginTests::test_validLogin"
+]

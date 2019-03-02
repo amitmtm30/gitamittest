@@ -1,0 +1,39 @@
+09/05/2018 12:03:30 AM - LoginPage - INFO: Element Found with locator: Login and  locatorType: link
+09/05/2018 12:03:31 AM - LoginPage - INFO: Clicked on element with locator: Login locatorType: link
+09/05/2018 12:03:38 AM - LoginPage - INFO: Element Found with locator: user_email and  locatorType: id
+09/05/2018 12:03:38 AM - LoginPage - INFO: Sent data on element with locator: user_email locatorType: id
+09/05/2018 12:03:38 AM - LoginPage - INFO: Element Found with locator: user_password and  locatorType: id
+09/05/2018 12:03:39 AM - LoginPage - INFO: Sent data on element with locator: user_password locatorType: id
+09/05/2018 12:03:39 AM - LoginPage - INFO: Element Found with locator: commit and  locatorType: name
+09/05/2018 12:03:50 AM - LoginPage - INFO: Clicked on element with locator: commit locatorType: name
+09/05/2018 12:03:51 AM - NavigationPage - INFO: Element Found with locator: //img[contains(@src,'avatar')] and  locatorType: xpath
+09/05/2018 12:03:51 AM - NavigationPage - INFO: Clicked on element with locator: //img[contains(@src,'avatar')] locatorType: xpath
+09/05/2018 12:03:51 AM - LoginPage - INFO: Element Found with locator: //a[contains(text(), 'Log Out')] and  locatorType: xpath
+09/05/2018 12:03:56 AM - LoginPage - INFO: Clicked on element with locator: //a[contains(text(), 'Log Out')] locatorType: xpath
+09/05/2018 12:03:56 AM - LoginPage - INFO: Element Found with locator: Login and  locatorType: link
+09/05/2018 12:03:56 AM - LoginPage - INFO: Clicked on element with locator: Login locatorType: link
+09/05/2018 12:04:00 AM - LoginPage - INFO: Element Found with locator: user_email and  locatorType: id
+09/05/2018 12:04:00 AM - LoginPage - INFO: Sent data on element with locator: user_email locatorType: id
+09/05/2018 12:04:00 AM - LoginPage - INFO: Element Found with locator: user_password and  locatorType: id
+09/05/2018 12:04:01 AM - LoginPage - INFO: Sent data on element with locator: user_password locatorType: id
+09/05/2018 12:04:01 AM - LoginPage - INFO: Element Found with locator: commit and  locatorType: name
+09/05/2018 12:04:04 AM - LoginPage - INFO: Clicked on element with locator: commit locatorType: name
+09/05/2018 12:04:04 AM - LoginPage - INFO: Element Found with locator: div[class$='alert-danger'] and  locatorType: css
+09/05/2018 12:04:04 AM - LoginPage - INFO: Element present with locator: div[class$='alert-danger'] locatorType: css
+09/05/2018 12:04:04 AM - LoginPage - INFO: Element Found with locator: Login and  locatorType: link
+09/05/2018 12:04:08 AM - LoginPage - INFO: Clicked on element with locator: Login locatorType: link
+09/05/2018 12:04:08 AM - LoginPage - INFO: Element Found with locator: user_email and  locatorType: id
+09/05/2018 12:04:08 AM - LoginPage - INFO: Sent data on element with locator: user_email locatorType: id
+09/05/2018 12:04:08 AM - LoginPage - INFO: Element Found with locator: user_password and  locatorType: id
+09/05/2018 12:04:08 AM - LoginPage - INFO: Sent data on element with locator: user_password locatorType: id
+09/05/2018 12:04:08 AM - LoginPage - INFO: Element Found with locator: commit and  locatorType: name
+09/05/2018 12:04:16 AM - LoginPage - INFO: Clicked on element with locator: commit locatorType: name
+09/05/2018 12:04:16 AM - Util - INFO: Actual Text From Application Web UI --> :: Let's Kode It
+09/05/2018 12:04:16 AM - Util - INFO: Expected Text From Application Web UI --> :: Let's Kode It
+09/05/2018 12:04:16 AM - Util - INFO: ### VERIFICATION CONTAINS !!!
+09/05/2018 12:04:16 AM - TestStatus - ERROR: ### VERIFICATION FAILED :: + Title is incorrect.
+09/05/2018 12:04:17 AM - TestStatus - INFO: Screenshot save to directory F:\Workspace-Python\Letskodeit\screenshot\Title is incorrect..1536086056689.png
+09/05/2018 12:04:35 AM - LoginPage - INFO: Element not found with locator: //*[@id='navbar']//span[text()='User Settings'] and  locatorType: xpath
+09/05/2018 12:04:35 AM - LoginPage - INFO: Element not present with locator: //*[@id='navbar']//span[text()='User Settings'] locatorType: xpath
+09/05/2018 12:04:35 AM - TestStatus - INFO: ### VERIFICATION SUCCESSFUL :: + Login was not successful.
+09/05/2018 12:04:35 AM - TestStatus - ERROR: test_validLogin### TEST FAILED

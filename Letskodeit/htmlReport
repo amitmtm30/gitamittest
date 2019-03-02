@@ -1,0 +1,599 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8"/>
+    <title>Test Report</title>
+    <link href="assets/style.css" rel="stylesheet" type="text/css"/></head>
+  <body onLoad="init()">
+    <script>/* This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this file,
+ * You can obtain one at http://mozilla.org/MPL/2.0/. */
+
+
+function toArray(iter) {
+    if (iter === null) {
+        return null;
+    }
+    return Array.prototype.slice.call(iter);
+}
+
+function find(selector, elem) {
+    if (!elem) {
+        elem = document;
+    }
+    return elem.querySelector(selector);
+}
+
+function find_all(selector, elem) {
+    if (!elem) {
+        elem = document;
+    }
+    return toArray(elem.querySelectorAll(selector));
+}
+
+function sort_column(elem) {
+    toggle_sort_states(elem);
+    var colIndex = toArray(elem.parentNode.childNodes).indexOf(elem);
+    var key;
+    if (elem.classList.contains('numeric')) {
+        key = key_num;
+    } else if (elem.classList.contains('result')) {
+        key = key_result;
+    } else {
+        key = key_alpha;
+    }
+    sort_table(elem, key(colIndex));
+}
+
+function show_all_extras() {
+    find_all('.col-result').forEach(show_extras);
+}
+
+function hide_all_extras() {
+    find_all('.col-result').forEach(hide_extras);
+}
+
+function show_extras(colresult_elem) {
+    var extras = colresult_elem.parentNode.nextElementSibling;
+    var expandcollapse = colresult_elem.firstElementChild;
+    extras.classList.remove("collapsed");
+    expandcollapse.classList.remove("expander");
+    expandcollapse.classList.add("collapser");
+}
+
+function hide_extras(colresult_elem) {
+    var extras = colresult_elem.parentNode.nextElementSibling;
+    var expandcollapse = colresult_elem.firstElementChild;
+    extras.classList.add("collapsed");
+    expandcollapse.classList.remove("collapser");
+    expandcollapse.classList.add("expander");
+}
+
+function show_filters() {
+    var filter_items = document.getElementsByClassName('filter');
+    for (var i = 0; i < filter_items.length; i++)
+        filter_items[i].hidden = false;
+}
+
+function add_collapse() {
+    // Add links for show/hide all
+    var resulttable = find('table#results-table');
+    var showhideall = document.createElement("p");
+    showhideall.innerHTML = '<a href="javascript:show_all_extras()">Show all details</a> / ' +
+                            '<a href="javascript:hide_all_extras()">Hide all details</a>';
+    resulttable.parentElement.insertBefore(showhideall, resulttable);
+
+    // Add show/hide link to each result
+    find_all('.col-result').forEach(function(elem) {
+        var collapsed = get_query_parameter('collapsed') || 'Passed';
+        var extras = elem.parentNode.nextElementSibling;
+        var expandcollapse = document.createElement("span");
+        if (collapsed.includes(elem.innerHTML)) {
+            extras.classList.add("collapsed");
+            expandcollapse.classList.add("expander");
+        } else {
+            expandcollapse.classList.add("collapser");
+        }
+        elem.appendChild(expandcollapse);
+
+        elem.addEventListener("click", function(event) {
+            if (event.currentTarget.parentNode.nextElementSibling.classList.contains("collapsed")) {
+                show_extras(event.currentTarget);
+            } else {
+                hide_extras(event.currentTarget);
+            }
+        });
+    })
+}
+
+function get_query_parameter(name) {
+    var match = RegExp('[?&]' + name + '=([^&]*)').exec(window.location.search);
+    return match && decodeURIComponent(match[1].replace(/\+/g, ' '));
+}
+
+function init () {
+    reset_sort_headers();
+
+    add_collapse();
+
+    show_filters();
+
+    toggle_sort_states(find('.initial-sort'));
+
+    find_all('.sortable').forEach(function(elem) {
+        elem.addEventListener("click",
+                              function(event) {
+                                  sort_column(elem);
+                              }, false)
+    });
+
+};
+
+function sort_table(clicked, key_func) {
+    var rows = find_all('.results-table-row');
+    var reversed = !clicked.classList.contains('asc');
+    var sorted_rows = sort(rows, key_func, reversed);
+    /* Whole table is removed here because browsers acts much slower
+     * when appending existing elements.
+     */
+    var thead = document.getElementById("results-table-head");
+    document.getElementById('results-table').remove();
+    var parent = document.createElement("table");
+    parent.id = "results-table";
+    parent.appendChild(thead);
+    sorted_rows.forEach(function(elem) {
+        parent.appendChild(elem);
+    });
+    document.getElementsByTagName("BODY")[0].appendChild(parent);
+}
+
+function sort(items, key_func, reversed) {
+    var sort_array = items.map(function(item, i) {
+        return [key_func(item), i];
+    });
+    var multiplier = reversed ? -1 : 1;
+
+    sort_array.sort(function(a, b) {
+        var key_a = a[0];
+        var key_b = b[0];
+        return multiplier * (key_a >= key_b ? 1 : -1);
+    });
+
+    return sort_array.map(function(item) {
+        var index = item[1];
+        return items[index];
+    });
+}
+
+function key_alpha(col_index) {
+    return function(elem) {
+        return elem.childNodes[1].childNodes[col_index].firstChild.data.toLowerCase();
+    };
+}
+
+function key_num(col_index) {
+    return function(elem) {
+        return parseFloat(elem.childNodes[1].childNodes[col_index].firstChild.data);
+    };
+}
+
+function key_result(col_index) {
+    return function(elem) {
+        var strings = ['Error', 'Failed', 'Rerun', 'XFailed', 'XPassed',
+                       'Skipped', 'Passed'];
+        return strings.indexOf(elem.childNodes[1].childNodes[col_index].firstChild.data);
+    };
+}
+
+function reset_sort_headers() {
+    find_all('.sort-icon').forEach(function(elem) {
+        elem.parentNode.removeChild(elem);
+    });
+    find_all('.sortable').forEach(function(elem) {
+        var icon = document.createElement("div");
+        icon.className = "sort-icon";
+        icon.textContent = "vvv";
+        elem.insertBefore(icon, elem.firstChild);
+        elem.classList.remove("desc", "active");
+        elem.classList.add("asc", "inactive");
+    });
+}
+
+function toggle_sort_states(elem) {
+    //if active, toggle between asc and desc
+    if (elem.classList.contains('active')) {
+        elem.classList.toggle('asc');
+        elem.classList.toggle('desc');
+    }
+
+    //if inactive, reset all other functions and add ascending active
+    if (elem.classList.contains('inactive')) {
+        reset_sort_headers();
+        elem.classList.remove('inactive');
+        elem.classList.add('active');
+    }
+}
+
+function is_all_rows_hidden(value) {
+  return value.hidden == false;
+}
+
+function filter_table(elem) {
+    var outcome_att = "data-test-result";
+    var outcome = elem.getAttribute(outcome_att);
+    class_outcome = outcome + " results-table-row";
+    var outcome_rows = document.getElementsByClassName(class_outcome);
+
+    for(var i = 0; i < outcome_rows.length; i++){
+        outcome_rows[i].hidden = !elem.checked;
+    }
+
+    var rows = find_all('.results-table-row').filter(is_all_rows_hidden);
+    var all_rows_hidden = rows.length == 0 ? true : false;
+    var not_found_message = document.getElementById("not-found-message");
+    not_found_message.hidden = !all_rows_hidden;
+}
+</script>
+    <h1>htmlReport</h1>
+    <p>Report generated on 12-Aug-2018 at 23:12:49 by<a href="https://pypi.python.org/pypi/pytest-html"> pytest-html</a> v1.19.0</p>
+    <h2>Environment</h2>
+    <table id="environment">
+      <tr>
+        <td>Packages</td>
+        <td>{&apos;pytest&apos;: &apos;3.6.3&apos;, &apos;py&apos;: &apos;1.5.4&apos;, &apos;pluggy&apos;: &apos;0.6.0&apos;}</td></tr>
+      <tr>
+        <td>Platform</td>
+        <td>Windows-8.1-6.3.9600-SP0</td></tr>
+      <tr>
+        <td>Plugins</td>
+        <td>{&apos;ordering&apos;: &apos;0.5&apos;, &apos;metadata&apos;: &apos;1.7.0&apos;, &apos;html&apos;: &apos;1.19.0&apos;}</td></tr>
+      <tr>
+        <td>Python</td>
+        <td>3.6.5</td></tr></table>
+    <h2>Summary</h2>
+    <p>4 tests ran in 147.77 seconds. </p>
+    <p class="filter" hidden="true">(Un)check the boxes to filter the results.</p><input checked="true" class="filter" data-test-result="passed" hidden="true" name="filter_checkbox" onChange="filter_table(this)" type="checkbox"/><span class="passed">3 passed</span>, <input checked="true" class="filter" data-test-result="skipped" disabled="true" hidden="true" name="filter_checkbox" onChange="filter_table(this)" type="checkbox"/><span class="skipped">0 skipped</span>, <input checked="true" class="filter" data-test-result="failed" hidden="true" name="filter_checkbox" onChange="filter_table(this)" type="checkbox"/><span class="failed">1 failed</span>, <input checked="true" class="filter" data-test-result="error" disabled="true" hidden="true" name="filter_checkbox" onChange="filter_table(this)" type="checkbox"/><span class="error">0 errors</span>, <input checked="true" class="filter" data-test-result="xfailed" disabled="true" hidden="true" name="filter_checkbox" onChange="filter_table(this)" type="checkbox"/><span class="xfailed">0 expected failures</span>, <input checked="true" class="filter" data-test-result="xpassed" disabled="true" hidden="true" name="filter_checkbox" onChange="filter_table(this)" type="checkbox"/><span class="xpassed">0 unexpected passes</span>
+    <h2>Results</h2>
+    <table id="results-table">
+      <thead id="results-table-head">
+        <tr>
+          <th class="sortable result initial-sort" col="result">Result</th>
+          <th class="sortable" col="name">Test</th>
+          <th class="sortable numeric" col="duration">Duration</th>
+          <th>Links</th></tr>
+        <tr hidden="true" id="not-found-message">
+          <th colspan="4">No results found. Try to check the filters</th></tr></thead>
+      <tbody class="failed results-table-row">
+        <tr>
+          <td class="col-result">Failed</td>
+          <td class="col-name">tests/test_suit_demo.py::LoginTests::test_validLogin</td>
+          <td class="col-duration">23.73</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log">self = &lt;tests.home.login_tests.LoginTests testMethod=test_validLogin&gt;<br/><br/>    @pytest.mark.run(order=1)<br/>    def test_validLogin(self):<br/>    <br/>        self.lp.login(&quot;test@email.com&quot;, &quot;abcabc&quot;)<br/>        result1 = self.lp.verifyLoginTitle()<br/>        self.ts.mark(result1, &quot;Title is incorrect.&quot;)<br/>        result = self.lp.verifyLoginSuccessful()<br/>        print(result)<br/>&gt;       self.ts.markFinal(&quot;test_validLogin&quot;, &quot;True&quot;, &quot;Login was not successful.&quot;)<br/><br/>tests\home\login_tests.py:28: <br/>_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _<br/><br/>self = &lt;utilities.teststatus.TestStatus object at 0x000000FEECA9A908&gt;<br/>testName = &#x27;test_validLogin&#x27;, result = &#x27;True&#x27;<br/>resultMessage = &#x27;Login was not successful.&#x27;<br/><br/>    def markFinal(self, testName, result, resultMessage):<br/>        self.setResult(result, resultMessage)<br/>    <br/>        if &quot;FAIL&quot; in self.resultList:<br/>            self.log.error(testName + &quot;### TEST FAILED&quot;)<br/>            self.resultList.clear()<br/>&gt;           assert True == False<br/><span class="error">E           AssertionError</span><br/><br/>utilities\teststatus.py:42: AssertionError<br/>---------------------------- Captured stdout setup -----------------------------<br/>Running method level setUp
+----------------------------- Captured stdout call -----------------------------<br/>False
+------------------------------ Captured log call -------------------------------<br/>selenium_driver.py          66 INFO     Element Found with locator: Login and  locatorType: link
+selenium_driver.py          93 INFO     Clicked on element with locator: Login locatorType: link
+selenium_driver.py          66 INFO     Element Found with locator: user_email and  locatorType: id
+selenium_driver.py         103 INFO     Sent data on element with locator: user_email locatorType: id
+selenium_driver.py          66 INFO     Element Found with locator: user_password and  locatorType: id
+selenium_driver.py         103 INFO     Sent data on element with locator: user_password locatorType: id
+selenium_driver.py          66 INFO     Element Found with locator: commit and  locatorType: name
+selenium_driver.py          93 INFO     Clicked on element with locator: commit locatorType: name
+util.py                     88 INFO     Actual Text From Application Web UI --&gt; :: Let&#x27;s Kode It
+util.py                     89 INFO     Expected Text From Application Web UI --&gt; :: Let&#x27;s Kode It
+util.py                     92 INFO     ### VERIFICATION CONTAINS !!!
+teststatus.py               25 ERROR    ### VERIFICATION FAILED :: + Title is incorrect.
+selenium_driver.py          34 INFO     Screenshot save to directory F:\Workspace-Python\Letskodeit\screenshot\Title is incorrect..1534095751606.png
+selenium_driver.py          68 INFO     Element not found with locator: //*[@id=&#x27;navbar&#x27;]//span[text()=&#x27;User Settings&#x27;] and  locatorType: xpath
+selenium_driver.py         170 INFO     Element not present with locator: //*[@id=&#x27;navbar&#x27;]//span[text()=&#x27;User Settings&#x27;] locatorType: xpath
+teststatus.py               17 INFO     ### VERIFICATION SUCCESSFUL :: + Login was not successful.
+teststatus.py               40 ERROR    test_validLogin### TEST FAILED</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">tests/test_suit_demo.py::RegisterCoursesTests::test_enrollForCourse_1___JavaScript_for_beginners____1234____1212____456____India____122002__</td>
+          <td class="col-duration">25.21</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log">---------------------------- Captured stdout setup -----------------------------<br/>Running one time setUp
+chrome
+Running method level setUp
+------------------------------ Captured log setup ------------------------------<br/>selenium_driver.py          66 INFO     Element Found with locator: Login and  locatorType: link
+selenium_driver.py          93 INFO     Clicked on element with locator: Login locatorType: link
+selenium_driver.py          66 INFO     Element Found with locator: user_email and  locatorType: id
+selenium_driver.py         103 INFO     Sent data on element with locator: user_email locatorType: id
+selenium_driver.py          66 INFO     Element Found with locator: user_password and  locatorType: id
+selenium_driver.py         103 INFO     Sent data on element with locator: user_password locatorType: id
+selenium_driver.py          66 INFO     Element Found with locator: commit and  locatorType: name
+selenium_driver.py          93 INFO     Clicked on element with locator: commit locatorType: name----------------------------- Captured stderr call -----------------------------<br/>  File &quot;c:\python\lib\runpy.py&quot;, line 193, in _run_module_as_main
+    &quot;__main__&quot;, mod_spec)
+  File &quot;c:\python\lib\runpy.py&quot;, line 85, in _run_code
+    exec(code, run_globals)
+  File &quot;C:\Python\Scripts\py.test.exe\__main__.py&quot;, line 9, in &lt;module&gt;
+    sys.exit(main())
+  File &quot;c:\python\lib\site-packages\_pytest\config\__init__.py&quot;, line 64, in main
+    return config.hook.pytest_cmdline_main(config=config)
+  File &quot;c:\python\lib\site-packages\pluggy\__init__.py&quot;, line 617, in __call__
+    return self._hookexec(self, self._nonwrappers + self._wrappers, kwargs)
+  File &quot;c:\python\lib\site-packages\pluggy\__init__.py&quot;, line 222, in _hookexec
+    return self._inner_hookexec(hook, methods, kwargs)
+  File &quot;c:\python\lib\site-packages\pluggy\__init__.py&quot;, line 216, in &lt;lambda&gt;
+    firstresult=hook.spec_opts.get(&#x27;firstresult&#x27;),
+  File &quot;c:\python\lib\site-packages\pluggy\callers.py&quot;, line 180, in _multicall
+    res = hook_impl.function(*args)
+  File &quot;c:\python\lib\site-packages\_pytest\main.py&quot;, line 208, in pytest_cmdline_main
+    return wrap_session(config, _main)
+  File &quot;c:\python\lib\site-packages\_pytest\main.py&quot;, line 178, in wrap_session
+    session.exitstatus = doit(config, session) or 0
+  File &quot;c:\python\lib\site-packages\_pytest\main.py&quot;, line 215, in _main
+    config.hook.pytest_runtestloop(session=session)
+  File &quot;c:\python\lib\site-packages\pluggy\__init__.py&quot;, line 617, in __call__
+    return self._hookexec(self, self._nonwrappers + self._wrappers, kwargs)
+  File &quot;c:\python\lib\site-packages\pluggy\__init__.py&quot;, line 222, in _hookexec
+    return self._inner_hookexec(hook, methods, kwargs)
+  File &quot;c:\python\lib\site-packages\pluggy\__init__.py&quot;, line 216, in &lt;lambda&gt;
+    firstresult=hook.spec_opts.get(&#x27;firstresult&#x27;),
+  File &quot;c:\python\lib\site-packages\pluggy\callers.py&quot;, line 180, in _multicall
+    res = hook_impl.function(*args)
+  File &quot;c:\python\lib\site-packages\_pytest\main.py&quot;, line 236, in pytest_runtestloop
+    item.config.hook.pytest_runtest_protocol(item=item, nextitem=nextitem)
+  File &quot;c:\python\lib\site-packages\pluggy\__init__.py&quot;, line 617, in __call__
+    return self._hookexec(self, self._nonwrappers + self._wrappers, kwargs)
+  File &quot;c:\python\lib\site-packages\pluggy\__init__.py&quot;, line 222, in _hookexec
+    return self._inner_hookexec(hook, methods, kwargs)
+  File &quot;c:\python\lib\site-packages\pluggy\__init__.py&quot;, line 216, in &lt;lambda&gt;
+    firstresult=hook.spec_opts.get(&#x27;firstresult&#x27;),
+  File &quot;c:\python\lib\site-packages\pluggy\callers.py&quot;, line 180, in _multicall
+    res = hook_impl.function(*args)
+  File &quot;c:\python\lib\site-packages\_pytest\runner.py&quot;, line 64, in pytest_runtest_protocol
+    runtestprotocol(item, nextitem=nextitem)
+  File &quot;c:\python\lib\site-packages\_pytest\runner.py&quot;, line 79, in runtestprotocol
+    reports.append(call_and_report(item, &quot;call&quot;, log))
+  File &quot;c:\python\lib\site-packages\_pytest\runner.py&quot;, line 159, in call_and_report
+    call = call_runtest_hook(item, when, **kwds)
+  File &quot;c:\python\lib\site-packages\_pytest\runner.py&quot;, line 183, in call_runtest_hook
+    treat_keyboard_interrupt_as_exception=item.config.getvalue(&quot;usepdb&quot;),
+  File &quot;c:\python\lib\site-packages\_pytest\runner.py&quot;, line 199, in __init__
+    self.result = func()
+  File &quot;c:\python\lib\site-packages\_pytest\runner.py&quot;, line 181, in &lt;lambda&gt;
+    lambda: ihook(item=item, **kwds),
+  File &quot;c:\python\lib\site-packages\pluggy\__init__.py&quot;, line 617, in __call__
+    return self._hookexec(self, self._nonwrappers + self._wrappers, kwargs)
+  File &quot;c:\python\lib\site-packages\pluggy\__init__.py&quot;, line 222, in _hookexec
+    return self._inner_hookexec(hook, methods, kwargs)
+  File &quot;c:\python\lib\site-packages\pluggy\__init__.py&quot;, line 216, in &lt;lambda&gt;
+    firstresult=hook.spec_opts.get(&#x27;firstresult&#x27;),
+  File &quot;c:\python\lib\site-packages\pluggy\callers.py&quot;, line 180, in _multicall
+    res = hook_impl.function(*args)
+  File &quot;c:\python\lib\site-packages\_pytest\runner.py&quot;, line 109, in pytest_runtest_call
+    item.runtest()
+  File &quot;c:\python\lib\site-packages\_pytest\unittest.py&quot;, line 184, in runtest
+    self._testcase(result=self)
+  File &quot;c:\python\lib\unittest\case.py&quot;, line 653, in __call__
+    return self.run(*args, **kwds)
+  File &quot;c:\python\lib\unittest\case.py&quot;, line 605, in run
+    testMethod()
+  File &quot;c:\python\lib\site-packages\ddt.py&quot;, line 145, in wrapper
+    return func(self, *args, **kwargs)
+  File &quot;F:\Workspace-Python\Letskodeit\tests\courses\register_courses_CSV_data_tests.py&quot;, line 38, in test_enrollForCourse
+    self.rcp.selectCategoryAndAuthor(&quot;All&quot;, &quot;All&quot;)
+  File &quot;F:\Workspace-Python\Letskodeit\pages\courses\register_courses_page.py&quot;, line 44, in selectCategoryAndAuthor
+    self.elementClick(locator = self._category_type.format(categoryType), locatorType=&quot;xpath&quot;)
+  File &quot;F:\Workspace-Python\Letskodeit\base\selenium_driver.py&quot;, line 96, in elementClick
+    print_stack()
+------------------------------ Captured log call -------------------------------<br/>selenium_driver.py         233 INFO     Element appeared on the web page
+selenium_driver.py          66 INFO     Element Found with locator: //span[contains(text(),&#x27;Kode It&#x27;)]/following-sibling::img and  locatorType: xpath
+selenium_driver.py         251 INFO     Click on element with locator //span[contains(text(),&#x27;Kode It&#x27;)]/following-sibling::img locator type xpath
+selenium_driver.py         214 INFO     Waiting for maximum :: 30 :: seconds for element to be clickable
+selenium_driver.py          66 INFO     Element Found with locator: //a[contains(text(),&#x27;All Courses&#x27;)] and  locatorType: xpath
+selenium_driver.py          93 INFO     Clicked on element with locator: //a[contains(text(),&#x27;All Courses&#x27;)] locatorType: xpath
+selenium_driver.py         214 INFO     Waiting for maximum :: 30 :: seconds for element to be clickable
+selenium_driver.py          66 INFO     Element Found with locator: //div[contains(text(), &#x27;Category&#x27;)]/..//following-sibling::button and  locatorType: xpath
+selenium_driver.py          93 INFO     Clicked on element with locator: //div[contains(text(), &#x27;Category&#x27;)]/..//following-sibling::button locatorType: xpath
+selenium_driver.py          66 INFO     Element Found with locator: //div[contains(text(), &#x27;Category&#x27;)]/..//following-sibling::li/a[text()=&#x27;All&#x27;] and  locatorType: xpath
+selenium_driver.py          95 INFO     Cannot click on the element with locator: //div[contains(text(), &#x27;Category&#x27;)]/..//following-sibling::li/a[text()=&#x27;All&#x27;] locatorType: xpath
+selenium_driver.py          66 INFO     Element Found with locator: //div[contains(text(), &#x27;Author&#x27;)]/..//following-sibling::button and  locatorType: xpath
+selenium_driver.py          93 INFO     Clicked on element with locator: //div[contains(text(), &#x27;Author&#x27;)]/..//following-sibling::button locatorType: xpath
+selenium_driver.py          66 INFO     Element Found with locator: //div[contains(text(), &#x27;Author&#x27;)]/..//following-sibling::li/a[text()=&#x27;All&#x27;] and  locatorType: xpath
+selenium_driver.py          93 INFO     Clicked on element with locator: //div[contains(text(), &#x27;Author&#x27;)]/..//following-sibling::li/a[text()=&#x27;All&#x27;] locatorType: xpath
+selenium_driver.py          66 INFO     Element Found with locator: query and  locatorType: name
+selenium_driver.py         103 INFO     Sent data on element with locator: query locatorType: name
+selenium_driver.py          66 INFO     Element Found with locator: //div[@class=&#x27;course-listing-title&#x27; and contains(text(),&#x27;JavaScript for beginners&#x27;)] and  locatorType: xpath
+selenium_driver.py          93 INFO     Clicked on element with locator: //div[@class=&#x27;course-listing-title&#x27; and contains(text(),&#x27;JavaScript for beginners&#x27;)] locatorType: xpath
+selenium_driver.py          66 INFO     Element Found with locator: enroll-button-top and  locatorType: id
+selenium_driver.py          93 INFO     Clicked on element with locator: enroll-button-top locatorType: id
+selenium_driver.py          66 INFO     Element Found with locator: //h1[text()=&#x27;Payment Information&#x27;] and  locatorType: xpath
+selenium_driver.py         240 INFO     Element appeared on web page with locator //h1[text()=&#x27;Payment Information&#x27;]
+selenium_driver.py         150 DEBUG    Switched to default content
+selenium_driver.py         155 DEBUG    Switched to frame with locator __privateStripeFrame4
+selenium_driver.py          66 INFO     Element Found with locator: //*[@aria-label=&#x27;Credit or debit card number&#x27;] and  locatorType: xpath
+selenium_driver.py         103 INFO     Sent data on element with locator: //*[@aria-label=&#x27;Credit or debit card number&#x27;] locatorType: xpath
+selenium_driver.py         150 DEBUG    Switched to default content
+selenium_driver.py         155 DEBUG    Switched to frame with locator __privateStripeFrame5
+selenium_driver.py          66 INFO     Element Found with locator: exp-date and  locatorType: name
+selenium_driver.py         103 INFO     Sent data on element with locator: exp-date locatorType: name
+selenium_driver.py         150 DEBUG    Switched to default content
+selenium_driver.py         155 DEBUG    Switched to frame with locator __privateStripeFrame6
+selenium_driver.py          66 INFO     Element Found with locator: cvc and  locatorType: name
+selenium_driver.py         103 INFO     Sent data on element with locator: cvc locatorType: name
+selenium_driver.py         150 DEBUG    Switched to default content
+selenium_driver.py          66 INFO     Element Found with locator: country_code and  locatorType: name
+selenium_driver.py         141 DEBUG    Select the value India from dropDown on element with locator: country_code locatorType: name
+selenium_driver.py         150 DEBUG    Switched to default content
+selenium_driver.py         155 DEBUG    Switched to frame with locator __privateStripeFrame7
+selenium_driver.py          66 INFO     Element Found with locator: postal and  locatorType: name
+selenium_driver.py          93 INFO     Clicked on element with locator:  locatorType: id
+selenium_driver.py         103 INFO     Sent data on element with locator:  locatorType: id
+selenium_driver.py         150 DEBUG    Switched to default content
+selenium_driver.py          66 INFO     Element Found with locator: agreed_to_terms_checkbox and  locatorType: id
+selenium_driver.py          93 INFO     Clicked on element with locator: agreed_to_terms_checkbox locatorType: id
+teststatus.py               17 INFO     ### VERIFICATION SUCCESSFUL :: + Successfully enrolled for course
+teststatus.py               44 INFO     enrollForCourse### TEST SUCCESSFUL</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">tests/test_suit_demo.py::RegisterCoursesTests::test_enrollForCourse_2___Learn_Python_3_from_scratch____1234____1212____476____India____122005__</td>
+          <td class="col-duration">21.28</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log">---------------------------- Captured stdout setup -----------------------------<br/>Running method level setUp
+----------------------------- Captured stderr call -----------------------------<br/>  File &quot;c:\python\lib\runpy.py&quot;, line 193, in _run_module_as_main
+    &quot;__main__&quot;, mod_spec)
+  File &quot;c:\python\lib\runpy.py&quot;, line 85, in _run_code
+    exec(code, run_globals)
+  File &quot;C:\Python\Scripts\py.test.exe\__main__.py&quot;, line 9, in &lt;module&gt;
+    sys.exit(main())
+  File &quot;c:\python\lib\site-packages\_pytest\config\__init__.py&quot;, line 64, in main
+    return config.hook.pytest_cmdline_main(config=config)
+  File &quot;c:\python\lib\site-packages\pluggy\__init__.py&quot;, line 617, in __call__
+    return self._hookexec(self, self._nonwrappers + self._wrappers, kwargs)
+  File &quot;c:\python\lib\site-packages\pluggy\__init__.py&quot;, line 222, in _hookexec
+    return self._inner_hookexec(hook, methods, kwargs)
+  File &quot;c:\python\lib\site-packages\pluggy\__init__.py&quot;, line 216, in &lt;lambda&gt;
+    firstresult=hook.spec_opts.get(&#x27;firstresult&#x27;),
+  File &quot;c:\python\lib\site-packages\pluggy\callers.py&quot;, line 180, in _multicall
+    res = hook_impl.function(*args)
+  File &quot;c:\python\lib\site-packages\_pytest\main.py&quot;, line 208, in pytest_cmdline_main
+    return wrap_session(config, _main)
+  File &quot;c:\python\lib\site-packages\_pytest\main.py&quot;, line 178, in wrap_session
+    session.exitstatus = doit(config, session) or 0
+  File &quot;c:\python\lib\site-packages\_pytest\main.py&quot;, line 215, in _main
+    config.hook.pytest_runtestloop(session=session)
+  File &quot;c:\python\lib\site-packages\pluggy\__init__.py&quot;, line 617, in __call__
+    return self._hookexec(self, self._nonwrappers + self._wrappers, kwargs)
+  File &quot;c:\python\lib\site-packages\pluggy\__init__.py&quot;, line 222, in _hookexec
+    return self._inner_hookexec(hook, methods, kwargs)
+  File &quot;c:\python\lib\site-packages\pluggy\__init__.py&quot;, line 216, in &lt;lambda&gt;
+    firstresult=hook.spec_opts.get(&#x27;firstresult&#x27;),
+  File &quot;c:\python\lib\site-packages\pluggy\callers.py&quot;, line 180, in _multicall
+    res = hook_impl.function(*args)
+  File &quot;c:\python\lib\site-packages\_pytest\main.py&quot;, line 236, in pytest_runtestloop
+    item.config.hook.pytest_runtest_protocol(item=item, nextitem=nextitem)
+  File &quot;c:\python\lib\site-packages\pluggy\__init__.py&quot;, line 617, in __call__
+    return self._hookexec(self, self._nonwrappers + self._wrappers, kwargs)
+  File &quot;c:\python\lib\site-packages\pluggy\__init__.py&quot;, line 222, in _hookexec
+    return self._inner_hookexec(hook, methods, kwargs)
+  File &quot;c:\python\lib\site-packages\pluggy\__init__.py&quot;, line 216, in &lt;lambda&gt;
+    firstresult=hook.spec_opts.get(&#x27;firstresult&#x27;),
+  File &quot;c:\python\lib\site-packages\pluggy\callers.py&quot;, line 180, in _multicall
+    res = hook_impl.function(*args)
+  File &quot;c:\python\lib\site-packages\_pytest\runner.py&quot;, line 64, in pytest_runtest_protocol
+    runtestprotocol(item, nextitem=nextitem)
+  File &quot;c:\python\lib\site-packages\_pytest\runner.py&quot;, line 79, in runtestprotocol
+    reports.append(call_and_report(item, &quot;call&quot;, log))
+  File &quot;c:\python\lib\site-packages\_pytest\runner.py&quot;, line 159, in call_and_report
+    call = call_runtest_hook(item, when, **kwds)
+  File &quot;c:\python\lib\site-packages\_pytest\runner.py&quot;, line 183, in call_runtest_hook
+    treat_keyboard_interrupt_as_exception=item.config.getvalue(&quot;usepdb&quot;),
+  File &quot;c:\python\lib\site-packages\_pytest\runner.py&quot;, line 199, in __init__
+    self.result = func()
+  File &quot;c:\python\lib\site-packages\_pytest\runner.py&quot;, line 181, in &lt;lambda&gt;
+    lambda: ihook(item=item, **kwds),
+  File &quot;c:\python\lib\site-packages\pluggy\__init__.py&quot;, line 617, in __call__
+    return self._hookexec(self, self._nonwrappers + self._wrappers, kwargs)
+  File &quot;c:\python\lib\site-packages\pluggy\__init__.py&quot;, line 222, in _hookexec
+    return self._inner_hookexec(hook, methods, kwargs)
+  File &quot;c:\python\lib\site-packages\pluggy\__init__.py&quot;, line 216, in &lt;lambda&gt;
+    firstresult=hook.spec_opts.get(&#x27;firstresult&#x27;),
+  File &quot;c:\python\lib\site-packages\pluggy\callers.py&quot;, line 180, in _multicall
+    res = hook_impl.function(*args)
+  File &quot;c:\python\lib\site-packages\_pytest\runner.py&quot;, line 109, in pytest_runtest_call
+    item.runtest()
+  File &quot;c:\python\lib\site-packages\_pytest\unittest.py&quot;, line 184, in runtest
+    self._testcase(result=self)
+  File &quot;c:\python\lib\unittest\case.py&quot;, line 653, in __call__
+    return self.run(*args, **kwds)
+  File &quot;c:\python\lib\unittest\case.py&quot;, line 605, in run
+    testMethod()
+  File &quot;c:\python\lib\site-packages\ddt.py&quot;, line 145, in wrapper
+    return func(self, *args, **kwargs)
+  File &quot;F:\Workspace-Python\Letskodeit\tests\courses\register_courses_CSV_data_tests.py&quot;, line 38, in test_enrollForCourse
+    self.rcp.selectCategoryAndAuthor(&quot;All&quot;, &quot;All&quot;)
+  File &quot;F:\Workspace-Python\Letskodeit\pages\courses\register_courses_page.py&quot;, line 44, in selectCategoryAndAuthor
+    self.elementClick(locator = self._category_type.format(categoryType), locatorType=&quot;xpath&quot;)
+  File &quot;F:\Workspace-Python\Letskodeit\base\selenium_driver.py&quot;, line 96, in elementClick
+    print_stack()
+------------------------------ Captured log call -------------------------------<br/>selenium_driver.py         233 INFO     Element appeared on the web page
+selenium_driver.py          66 INFO     Element Found with locator: //span[contains(text(),&#x27;Kode It&#x27;)]/following-sibling::img and  locatorType: xpath
+selenium_driver.py         251 INFO     Click on element with locator //span[contains(text(),&#x27;Kode It&#x27;)]/following-sibling::img locator type xpath
+selenium_driver.py         214 INFO     Waiting for maximum :: 30 :: seconds for element to be clickable
+selenium_driver.py          66 INFO     Element Found with locator: //a[contains(text(),&#x27;All Courses&#x27;)] and  locatorType: xpath
+selenium_driver.py          93 INFO     Clicked on element with locator: //a[contains(text(),&#x27;All Courses&#x27;)] locatorType: xpath
+selenium_driver.py         214 INFO     Waiting for maximum :: 30 :: seconds for element to be clickable
+selenium_driver.py          66 INFO     Element Found with locator: //div[contains(text(), &#x27;Category&#x27;)]/..//following-sibling::button and  locatorType: xpath
+selenium_driver.py          93 INFO     Clicked on element with locator: //div[contains(text(), &#x27;Category&#x27;)]/..//following-sibling::button locatorType: xpath
+selenium_driver.py          66 INFO     Element Found with locator: //div[contains(text(), &#x27;Category&#x27;)]/..//following-sibling::li/a[text()=&#x27;All&#x27;] and  locatorType: xpath
+selenium_driver.py          95 INFO     Cannot click on the element with locator: //div[contains(text(), &#x27;Category&#x27;)]/..//following-sibling::li/a[text()=&#x27;All&#x27;] locatorType: xpath
+selenium_driver.py          66 INFO     Element Found with locator: //div[contains(text(), &#x27;Author&#x27;)]/..//following-sibling::button and  locatorType: xpath
+selenium_driver.py          93 INFO     Clicked on element with locator: //div[contains(text(), &#x27;Author&#x27;)]/..//following-sibling::button locatorType: xpath
+selenium_driver.py          66 INFO     Element Found with locator: //div[contains(text(), &#x27;Author&#x27;)]/..//following-sibling::li/a[text()=&#x27;All&#x27;] and  locatorType: xpath
+selenium_driver.py          93 INFO     Clicked on element with locator: //div[contains(text(), &#x27;Author&#x27;)]/..//following-sibling::li/a[text()=&#x27;All&#x27;] locatorType: xpath
+selenium_driver.py          66 INFO     Element Found with locator: query and  locatorType: name
+selenium_driver.py         103 INFO     Sent data on element with locator: query locatorType: name
+selenium_driver.py          66 INFO     Element Found with locator: //div[@class=&#x27;course-listing-title&#x27; and contains(text(),&#x27;Learn Python 3 from scratch&#x27;)] and  locatorType: xpath
+selenium_driver.py          93 INFO     Clicked on element with locator: //div[@class=&#x27;course-listing-title&#x27; and contains(text(),&#x27;Learn Python 3 from scratch&#x27;)] locatorType: xpath
+selenium_driver.py          66 INFO     Element Found with locator: enroll-button-top and  locatorType: id
+selenium_driver.py          93 INFO     Clicked on element with locator: enroll-button-top locatorType: id
+selenium_driver.py          66 INFO     Element Found with locator: //h1[text()=&#x27;Payment Information&#x27;] and  locatorType: xpath
+selenium_driver.py         240 INFO     Element appeared on web page with locator //h1[text()=&#x27;Payment Information&#x27;]
+selenium_driver.py         150 DEBUG    Switched to default content
+selenium_driver.py         155 DEBUG    Switched to frame with locator __privateStripeFrame4
+selenium_driver.py          66 INFO     Element Found with locator: //*[@aria-label=&#x27;Credit or debit card number&#x27;] and  locatorType: xpath
+selenium_driver.py         103 INFO     Sent data on element with locator: //*[@aria-label=&#x27;Credit or debit card number&#x27;] locatorType: xpath
+selenium_driver.py         150 DEBUG    Switched to default content
+selenium_driver.py         155 DEBUG    Switched to frame with locator __privateStripeFrame5
+selenium_driver.py          66 INFO     Element Found with locator: exp-date and  locatorType: name
+selenium_driver.py         103 INFO     Sent data on element with locator: exp-date locatorType: name
+selenium_driver.py         150 DEBUG    Switched to default content
+selenium_driver.py         155 DEBUG    Switched to frame with locator __privateStripeFrame6
+selenium_driver.py          66 INFO     Element Found with locator: cvc and  locatorType: name
+selenium_driver.py         103 INFO     Sent data on element with locator: cvc locatorType: name
+selenium_driver.py         150 DEBUG    Switched to default content
+selenium_driver.py          66 INFO     Element Found with locator: country_code and  locatorType: name
+selenium_driver.py         141 DEBUG    Select the value India from dropDown on element with locator: country_code locatorType: name
+selenium_driver.py         150 DEBUG    Switched to default content
+selenium_driver.py         155 DEBUG    Switched to frame with locator __privateStripeFrame7
+selenium_driver.py          66 INFO     Element Found with locator: postal and  locatorType: name
+selenium_driver.py          93 INFO     Clicked on element with locator:  locatorType: id
+selenium_driver.py         103 INFO     Sent data on element with locator:  locatorType: id
+selenium_driver.py         150 DEBUG    Switched to default content
+selenium_driver.py          66 INFO     Element Found with locator: agreed_to_terms_checkbox and  locatorType: id
+selenium_driver.py          93 INFO     Clicked on element with locator: agreed_to_terms_checkbox locatorType: id
+teststatus.py               17 INFO     ### VERIFICATION SUCCESSFUL :: + Successfully enrolled for course
+teststatus.py               44 INFO     enrollForCourse### TEST SUCCESSFUL</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">tests/test_suit_demo.py::LoginTests::test_invalidValidLogin</td>
+          <td class="col-duration">9.92</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log">---------------------------- Captured stdout setup -----------------------------<br/>Running one time setUp
+chrome
+Running method level setUp
+------------------------------ Captured log setup ------------------------------<br/>selenium_driver.py          66 INFO     Element Found with locator: Login and  locatorType: link
+selenium_driver.py          93 INFO     Clicked on element with locator: Login locatorType: link
+selenium_driver.py          66 INFO     Element Found with locator: user_email and  locatorType: id
+selenium_driver.py         103 INFO     Sent data on element with locator: user_email locatorType: id
+selenium_driver.py          66 INFO     Element Found with locator: user_password and  locatorType: id
+selenium_driver.py         103 INFO     Sent data on element with locator: user_password locatorType: id
+selenium_driver.py          66 INFO     Element Found with locator: commit and  locatorType: name
+selenium_driver.py          93 INFO     Clicked on element with locator: commit locatorType: name------------------------------ Captured log call -------------------------------<br/>selenium_driver.py          66 INFO     Element Found with locator: //img[contains(@src,&#x27;avatar&#x27;)] and  locatorType: xpath
+selenium_driver.py          93 INFO     Clicked on element with locator: //img[contains(@src,&#x27;avatar&#x27;)] locatorType: xpath
+selenium_driver.py          66 INFO     Element Found with locator: //a[contains(text(), &#x27;Log Out&#x27;)] and  locatorType: xpath
+selenium_driver.py          93 INFO     Clicked on element with locator: //a[contains(text(), &#x27;Log Out&#x27;)] locatorType: xpath
+selenium_driver.py          66 INFO     Element Found with locator: Login and  locatorType: link
+selenium_driver.py          93 INFO     Clicked on element with locator: Login locatorType: link
+selenium_driver.py          66 INFO     Element Found with locator: user_email and  locatorType: id
+selenium_driver.py         103 INFO     Sent data on element with locator: user_email locatorType: id
+selenium_driver.py          66 INFO     Element Found with locator: user_password and  locatorType: id
+selenium_driver.py         103 INFO     Sent data on element with locator: user_password locatorType: id
+selenium_driver.py          66 INFO     Element Found with locator: commit and  locatorType: name
+selenium_driver.py          93 INFO     Clicked on element with locator: commit locatorType: name
+selenium_driver.py          66 INFO     Element Found with locator: div[class$=&#x27;alert-danger&#x27;] and  locatorType: css
+selenium_driver.py         166 INFO     Element present with locator: div[class$=&#x27;alert-danger&#x27;] locatorType: css</div></td></tr></tbody></table></body></html>
